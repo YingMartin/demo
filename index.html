@@ -313,7 +313,7 @@
 		}
 
 		if (window.location.hash === "") {
-			d3.json("shark.json", function(err, res) {
+			d3.json("shark_1950.json", function(err, res) {
 				if (!err) {
 					console.log(res);
 					var data = d3.nest().key(function(d) {
@@ -322,7 +322,7 @@
 						return d.subregion;
 					})*/.entries(res);
 					main({
-						title: "Global Shark Capture <span style='font-size:0.8em;'>(Source: FAO FishStatJ)</span>"
+						title: "Global Shark Capture in 1950.<span style='font-size:0.8em;'>(Source: FAO FishStatJ)</span>"
 					}, {
 						key: "World",
 						values: data
@@ -331,6 +331,34 @@
 			});
 		}
 
+		function switchTo(year) {
+			$("#chart").html("");
+			d3.json("shark_"+year+".json", function(err, res) {
+				if (!err) {
+					console.log(res);
+					var data = d3.nest().key(function(d) {
+						return d.region;
+					})/*.key(function(d) {
+						return d.subregion;
+					})*/.entries(res);
+					main({
+						title: "Global Shark Capture in "+year+".<span style='font-size:0.8em;'>(Source: FAO FishStatJ)</span>"
+					}, {
+						key: "World",
+						values: data
+					});
+				}
+			});
+		}
+		d3.select("body").append("select").attr({ id:"year_select" });
+		for(var i=1950;i<=2015;i++) {
+			$("#year_select").append($("<option></option>").attr("value",i).text(i+"年"));
+		}
+		$("#year_select").change(function(e) {
+			var selected_year = $("#year_select option:selected").val();
+			console.log(selected_year);
+			switchTo(selected_year);
+		});
 	</script>
 </body>
 

@@ -313,7 +313,7 @@
 		}
 
 		if (window.location.hash === "") {
-			d3.json("countries.json", function(err, res) {
+			d3.json("shark.json", function(err, res) {
 				if (!err) {
 					console.log(res);
 					var data = d3.nest().key(function(d) {
@@ -322,7 +322,7 @@
 						return d.subregion;
 					})*/.entries(res);
 					main({
-						title: "World Population"
+						title: "Global Shark Capture <span style='font-size:0.8em;'>(Source: FAO FishStatJ)</span>"
 					}, {
 						key: "World",
 						values: data

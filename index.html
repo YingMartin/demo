@@ -19,7 +19,7 @@
 
 			return main(opts, data);
 		});
-
+		//畫布設定
 		var defaults = {
 			margin: {
 				top: 24,
@@ -33,7 +33,7 @@
 			width: 1500,
 			height: 800
 		};
-
+		//依照給的資料畫樹狀圖
 		function main(o, data) {
 			var root,
 				opts = $.extend(true, {}, defaults, o),
@@ -87,7 +87,10 @@
 			grandparent.append("text")
 				.attr("x", 6)
 				.attr("y", 6 - margin.top)
-				.attr("dy", ".75em");
+				.attr("dy", ".75em")
+				.style({
+					fill: "#fff"
+				});
 
 			if (opts.title) {
 				$("#chart").prepend("<p class='title'>" + opts.title + "</p>");
@@ -107,13 +110,7 @@
 			console.log(root);
 			display(root);
 
-			if (window.parent !== window) {
-				var myheight = document.documentElement.scrollHeight || document.body.scrollHeight;
-				window.parent.postMessage({
-					height: myheight
-				}, '*');
-			}
-
+			//依照設定初始化
 			function initialize(root) {
 				root.x = root.y = 0;
 				root.dx = width;
@@ -121,10 +118,7 @@
 				root.depth = 0;
 			}
 
-			// Aggregate the values for internal nodes. This is normally done by the
-			// treemap layout, but not here because of our custom implementation.
-			// We also take a snapshot of the original children (_children) to avoid
-			// the children being overwritten when when layout is computed.
+			//計算總值
 			function accumulate(d) {
 				return (d._children = d.values) ?
 					d.value = d.values.reduce(function(p, v) {
@@ -133,13 +127,7 @@
 					d.value;
 			}
 
-			// Compute the treemap layout recursively such that each group of siblings
-			// uses the same size (1×1) rather than the dimensions of the parent cell.
-			// This optimizes the layout for the current zoom state. Note that a wrapper
-			// object is created for the parent node for each group of siblings so that
-			// the parent’s dimensions are not discarded as we recurse. Since each group
-			// of sibling was laid out in 1×1, we must rescale to fit using absolute
-			// coordinates. This lets us use a viewport to zoom.
+			//用遞迴方式去計算子物件的大小
 			function layout(d) {
 				if (d._children) {
 					treemap.nodes({
@@ -156,6 +144,7 @@
 				}
 			}
 
+			//顯示&切換控制
 			function display(d) {
 				grandparent
 					.datum(d.parent)
@@ -229,22 +218,22 @@
 						t1 = g1.transition().duration(750),
 						t2 = g2.transition().duration(750);
 
-					// Update the domain only after entering new elements.
+					//新元素加入後要記得更新.
 					x.domain([d.x, d.x + d.dx]);
 					y.domain([d.y, d.y + d.dy]);
 
-					// Enable anti-aliasing during the transition.
+					//啟用反鋸齒，這樣比較好看一點
 					svg.style("shape-rendering", null);
 
-					// Draw child nodes on top of parent nodes.
+					//將子節點的Z軸在父節點上，畫出來的時候才看得到
 					svg.selectAll(".depth").sort(function(a, b) {
 						return a.depth - b.depth;
 					});
 
-					// Fade-in entering text.
+					//文字淡入效果
 					g2.selectAll("text").style("fill-opacity", 0);
 
-					// Transition to the new view.
+					//切換到新畫出來的部分
 					t1.selectAll(".ptext").call(text).style("fill-opacity", 0);
 					t1.selectAll(".ctext").call(text2).style("fill-opacity", 0);
 					t2.selectAll(".ptext").call(text).style("fill-opacity", 1);
@@ -252,7 +241,7 @@
 					t1.selectAll("rect").call(rect);
 					t2.selectAll("rect").call(rect);
 
-					// Remove the old node when the transition is finished.
+					//舊的就拿掉避免出問題
 					t1.remove().each("end", function() {
 						svg.style("shape-rendering", "crispEdges");
 						transitioning = false;
@@ -305,6 +294,7 @@
 					});
 			}
 
+			//控制麵包屑的文字
 			function name(d) {
 				return d.parent ?
 					name(d.parent) + " / " + d.key + " (" + formatNumber(d.value) + ")" :
@@ -312,17 +302,34 @@
 			}
 		}
 
-		if (window.location.hash === "") {
-			d3.json("shark_1950.json", function(err, res) {
+		//一開始先用1950年的資料畫第一張圖
+		d3.json("shark_1950.json", function(err, res) {
+			if (!err) {
+				console.log(res);
+				var data = d3.nest().key(function(d) {
+					return d.region;
+				}).entries(res);
+				main({
+					title: "1950年全世界鯊魚捕捉數量(單位：噸) <span style='font-size:0.8em;'>(資料來源: 聯合國糧食及農業組織[FAO])</span>"
+				}, {
+					key: "全世界",
+					values: data
+				});
+			}
+		});
+
+		//配合select去切換其他年份
+		function switchTo(year) {
+			//先清掉之前的年份
+			$("#chart").html("");
+			d3.json("shark_" + year + ".json", function(err, res) {
 				if (!err) {
 					console.log(res);
 					var data = d3.nest().key(function(d) {
 						return d.region;
-					})/*.key(function(d) {
-						return d.subregion;
-					})*/.entries(res);
+					}).entries(res);
 					main({
-						title: "1950年全世界鯊魚捕捉數量(單位：噸) <span style='font-size:0.8em;'>(資料來源: 聯合國糧食及農業組織[FAO])</span>"
+						title: year + "年全世界鯊魚捕捉數量(單位：噸)<span style='font-size:0.8em;'>(資料來源: 聯合國糧食及農業組織[FAO])</span>"
 					}, {
 						key: "全世界",
 						values: data
@@ -331,34 +338,23 @@
 			});
 		}
 
-		function switchTo(year) {
-			$("#chart").html("");
-			d3.json("shark_"+year+".json", function(err, res) {
-				if (!err) {
-					console.log(res);
-					var data = d3.nest().key(function(d) {
-						return d.region;
-					})/*.key(function(d) {
-						return d.subregion;
-					})*/.entries(res);
-					main({
-						title: year+"年全世界鯊魚捕捉數量(單位：噸)<span style='font-size:0.8em;'>(資料來源: 聯合國糧食及農業組織[FAO])</span>"
-					}, {
-						key: "全世界",
-						values: data
-					});
-				}
-			});
+		//操作說明&年份選項
+		d3.select("body").append("span").text("請由下拉選單選擇要看的年份：");
+		d3.select("body").append("select").attr({
+			id: "year_select"
+		});
+		//我只會用jQuery來做
+		for (var i = 1950; i <= 2015; i++) {
+			$("#year_select").append($("<option></option>").attr("value", i).text(i + "年"));
 		}
-		d3.select("body").append("select").attr({ id:"year_select" });
-		for(var i=1950;i<=2015;i++) {
-			$("#year_select").append($("<option></option>").attr("value",i).text(i+"年"));
-		}
+		//綁定改變event，當選新的年份時切換過去
 		$("#year_select").change(function(e) {
 			var selected_year = $("#year_select option:selected").val();
 			console.log(selected_year);
 			switchTo(selected_year);
 		});
+		d3.select("body").append("span").html("；<br />點選國家方塊可看該國在各水域的捕捉量");
+
 	</script>
 </body>
 
